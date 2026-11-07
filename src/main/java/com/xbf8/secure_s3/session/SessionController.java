@@ -1,0 +1,38 @@
+package com.xbf8.secure_s3.session;
+
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+import com.xbf8.secure_s3.file.FileEntity;
+import com.xbf8.secure_s3.file.FileService;
+import com.xbf8.secure_s3.file.dto.CreateFileDto;
+import com.xbf8.secure_s3.session.dto.SessionResponse;
+import com.xbf8.secure_s3.session.enums.SessionOperation;
+
+import jakarta.validation.Valid;
+
+@RestController
+@RequestMapping(path = "/sessions")
+public class SessionController {
+    private final SessionService sessionService;
+    private final FileService fileService;
+    public SessionController(SessionService sessionService, FileService fileService) {
+        this.sessionService = sessionService;
+        this.fileService = fileService;
+    }
+
+    @PostMapping(path = "/upload", version = "v1.0")
+    public ResponseEntity<SessionResponse> createUpload(
+        @Valid @RequestBody CreateFileDto dto
+    ) {
+        FileEntity file = this.fileService.create(dto);
+        SessionEntity entity = this.sessionService.create(file.getId(), SessionOperation.UPLOAD);
+        return ResponseEntity
+                .status(HttpStatus.CREATED)
+                .body(SessionResponse.from(entity));
+    }
+}
