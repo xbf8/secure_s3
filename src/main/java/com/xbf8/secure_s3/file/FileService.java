@@ -1,6 +1,7 @@
 package com.xbf8.secure_s3.file;
 
 import java.time.Instant;
+import java.util.Optional;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -26,5 +27,13 @@ public class FileService {
         } catch (Exception e) {
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR);
         }
+    }
+
+    public FileEntity getOne(long id) {
+        Optional<FileEntity> entity = this.fileRepository.findById(id);
+        if (entity.isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+        }
+        return entity.get();
     }
 }
