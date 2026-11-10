@@ -27,3 +27,17 @@ services:
       postgres:
         condition: service_healthy
     restart: "no"
+
+  openbao:
+    image: openbao/openbao:latest
+    container_name: openbao
+    user: "0:0"
+    ports:
+      - "8200:8200"
+    volumes:
+      - ./openbao-config:/openbao/config
+      - ./volume/openbao:/openbao/file
+    environment:
+      VAULT_ADDR: http://0.0.0.0:8200
+    command: server -config=/openbao/config/openbao.hcl
+    restart: unless-stopped

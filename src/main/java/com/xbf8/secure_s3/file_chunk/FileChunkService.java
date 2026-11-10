@@ -3,10 +3,13 @@ package com.xbf8.secure_s3.file_chunk;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
 
 import jakarta.annotation.PostConstruct;
 
@@ -45,5 +48,13 @@ public class FileChunkService {
             fileSize -= chunkMaxSize;
         }
         return this.fileChunkRepository.saveAll(chunks);
+    }
+
+    public FileChunkEntity getOne(long id, long fileId) {
+        Optional<FileChunkEntity> entity = this.fileChunkRepository.findById(id);
+        if (entity.isEmpty() || entity.get().getFileId() != fileId) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+        }
+        return entity.get();
     }
 }

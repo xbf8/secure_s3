@@ -1,5 +1,6 @@
 HELP.md
 .env
+secure.txt
 volume/
 .gradle
 build/
