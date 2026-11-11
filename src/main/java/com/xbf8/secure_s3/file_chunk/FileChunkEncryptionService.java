@@ -23,6 +23,10 @@ public class FileChunkEncryptionService {
         this.secureRandom = new SecureRandom();
     }
 
+    public long calcCipherLenght(long originLengthByte) {
+        return originLengthByte + IV_LENGTH_BYTE + (TAG_LENGTH_BIT/8);
+    }
+
     public InputStream encrypt(InputStream requestInputStream, byte[] dekBytes) throws Exception {
         SecretKeySpec dek = new SecretKeySpec(dekBytes, "AES");
         byte[] iv = new byte[IV_LENGTH_BYTE];

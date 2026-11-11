@@ -28,6 +28,14 @@ services:
         condition: service_healthy
     restart: "no"
 
+  perms:
+    image: alpine
+    user: root
+    volumes:
+      - ./volume/rustfs/data:/fix_path/rustfs-data
+    command: chown -R 10001:10001 /fix_path/rustfs-data
+    restart: "no"
+
   openbao:
     image: openbao/openbao:latest
     container_name: openbao
@@ -41,3 +49,21 @@ services:
       VAULT_ADDR: http://0.0.0.0:8200
     command: server -config=/openbao/config/openbao.hcl
     restart: unless-stopped
+
+  rustfs:
+    image: rustfs/rustfs:latest
+    container_name: rustfs
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - ./volume/rustfs/data:/data
+    environment:
+      - RUSTFS_ACCESS_KEY=your_strong_access_key
+      - RUSTFS_SECRET_KEY=your_strong_secret_key
+      - RUSTFS_CONSOLE_ENABLE=true
+      - RUSTFS_VOLUMES=/data
+    restart: unless-stopped
+    depends_on:
+      perms:
+        condition: service_completed_successfully

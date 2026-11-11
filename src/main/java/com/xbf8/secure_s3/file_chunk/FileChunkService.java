@@ -57,4 +57,9 @@ public class FileChunkService {
         }
         return entity.get();
     }
+
+    public void saveEDEK(FileChunkEntity entity, String edek) {
+        entity.setEdek(edek);
+        this.fileChunkRepository.save(entity);
+    }
 }

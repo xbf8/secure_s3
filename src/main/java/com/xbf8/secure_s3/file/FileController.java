@@ -11,6 +11,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.server.ResponseStatusException;
 
 import com.xbf8.secure_s3.file_chunk.FileChunkEncryptionService;
 import com.xbf8.secure_s3.file_chunk.FileChunkEntity;
@@ -18,8 +19,8 @@ import com.xbf8.secure_s3.file_chunk.FileChunkService;
 import com.xbf8.secure_s3.file_chunk.dto.FileChunkResponse;
 import com.xbf8.secure_s3.openbao.OpenbaoService;
 import com.xbf8.secure_s3.openbao.dto.OpenbaoGenerateDataKey;
+import com.xbf8.secure_s3.s3.S3Service;
 
-import jakarta.servlet.ServletInputStream;
 import jakarta.servlet.http.HttpServletRequest;
 
 @RestController
@@ -29,16 +30,19 @@ public class FileController {
     private final FileChunkService fileChunkService;
     private final OpenbaoService openbaoService;
     private final FileChunkEncryptionService fileChunkEncryptionService;
+    private final S3Service s3Service;
     public FileController(
         FileService fileService,
         FileChunkService fileChunkService,
         OpenbaoService openbaoService,
-        FileChunkEncryptionService fileChunkEncryptionService
+        FileChunkEncryptionService fileChunkEncryptionService,
+        S3Service s3Service
     ) {
         this.fileService = fileService;
         this.fileChunkService = fileChunkService;
         this.openbaoService = openbaoService;
         this.fileChunkEncryptionService = fileChunkEncryptionService;
+        this.s3Service = s3Service;
     }
 
     @PostMapping(path = "/{id}/chunks")
@@ -56,21 +60,32 @@ public class FileController {
         @PathVariable long cid,
         HttpServletRequest request
     ) {
-        // FileChunkEntity chunk = this.fileChunkService.getOne(cid, id);
-        // 1. Check the size of the stream.
+        FileChunkEntity chunk = this.fileChunkService.getOne(cid, id);
+        if (chunk.getSize() != request.getContentLengthLong() * 8) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST);
+        }
+
         try (InputStream requestInputStream = request.getInputStream()) {
-            // 2. Create the DEK.
             OpenbaoGenerateDataKey key = this.openbaoService.generateDataKey();
 
-            // 3. Encrypt the chunk.
             InputStream encryptInputStream = this.fileChunkEncryptionService
                 .encrypt(requestInputStream, key.plaintext());
 
-            // 4. Save the encrypted chunk in the rustfs.
-        } catch (Exception e) {
+            long CipherLength = this.fileChunkEncryptionService.calcCipherLenght(
+                request.getContentLengthLong()
+            );
 
+            // TODO: We can add a project/user id base file name, for exampe the main system might
+            //       have the user_id, so we can make the file names like this
+            //       "<user-id>/<file-id>/<part-index>.enc".
+            String objectKey = String.format("%d/%d.enc", chunk.getFileId(), chunk.getIndex());
+            this.s3Service.uploadStream(encryptInputStream, CipherLength, objectKey);
+
+            this.fileChunkService.saveEDEK(chunk, key.ciphertext());
+
+            return ResponseEntity.status(HttpStatus.OK).body(null);
+        } catch (Exception e) {
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR);
         }
-        // 5. Save the EDEK to chunk entity.
-        return ResponseEntity.status(HttpStatus.OK).body(null);
     }
 }
