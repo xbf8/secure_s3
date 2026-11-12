@@ -6,12 +6,14 @@ import java.util.List;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
+import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
 
 import com.xbf8.secure_s3.file_chunk.FileChunkEncryptionService;
 import com.xbf8.secure_s3.file_chunk.FileChunkEntity;
@@ -87,5 +89,47 @@ public class FileController {
         } catch (Exception e) {
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR);
         }
+    }
+
+    @GetMapping(path = "/{id}/chunks")
+    public ResponseEntity<List<FileChunkResponse>> getChunks(
+        @PathVariable long id
+    ) {
+        List<FileChunkEntity> chunks = this.fileChunkService.getAll(id);
+        return ResponseEntity
+            .status(HttpStatus.OK)
+            .body(chunks.stream().map(c -> FileChunkResponse.from(c)).toList());
+    }
+
+    @GetMapping(path = "/{id}/chunks/{cid}")
+    public ResponseEntity<StreamingResponseBody> downloadChunk(
+        @PathVariable long id,
+        @PathVariable long cid
+    ) {
+        FileChunkEntity chunk = this.fileChunkService.getOne(cid, id);
+        if (chunk.getEdek() == null) {
+            throw new ResponseStatusException(HttpStatus.NO_CONTENT);
+        }
+
+        byte[] dek = this.openbaoService.decryptDataKey(chunk.getEdek());
+
+        String objectKey = String.format("%d/%d.enc", chunk.getFileId(), chunk.getIndex());
+        StreamingResponseBody body = outputStream -> {
+            try (InputStream fileInputStream = this.s3Service.downloadStream(objectKey)) {
+                InputStream decryptInputStream = this.fileChunkEncryptionService.decrypt(
+                    fileInputStream,
+                    dek
+                );
+                decryptInputStream.transferTo(outputStream);
+            } catch (Exception e) {
+                throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR);
+            }
+        };
+
+        return ResponseEntity
+            .status(HttpStatus.OK)
+            .header("Chunk-Index", chunk.getIndex().toString())
+            .contentType(MediaType.APPLICATION_OCTET_STREAM)
+            .body(body);
     }
 }

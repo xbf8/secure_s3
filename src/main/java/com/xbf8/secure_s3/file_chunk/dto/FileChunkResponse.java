@@ -14,6 +14,9 @@ public record FileChunkResponse(
     long size,
     short index,
 
+    @JsonProperty("is_uploaded")
+    boolean isUploaded,
+
     @JsonProperty("created_at")
     Instant createdAt
 ) {
@@ -23,6 +26,7 @@ public record FileChunkResponse(
             entity.getFileId(),
             entity.getSize(),
             entity.getIndex(),
+            entity.getEdek() == null ? false : true,
             entity.getCreatedAt()
         );
     }

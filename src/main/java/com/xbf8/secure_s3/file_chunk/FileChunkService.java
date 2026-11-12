@@ -62,4 +62,19 @@ public class FileChunkService {
         entity.setEdek(edek);
         this.fileChunkRepository.save(entity);
     }
+
+    public List<FileChunkEntity> getAll(long fileId) {
+        Optional<List<FileChunkEntity>> entitiesResult = this.fileChunkRepository
+            .findAllByFileId(fileId);
+        if (entitiesResult.isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+        }
+
+        List<FileChunkEntity> entities = entitiesResult.get();
+        if (entities.size() < 1) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+        }
+
+        return entities;
+    }
 }
