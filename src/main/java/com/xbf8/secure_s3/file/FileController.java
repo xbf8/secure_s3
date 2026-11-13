@@ -63,7 +63,7 @@ public class FileController {
         HttpServletRequest request
     ) {
         FileChunkEntity chunk = this.fileChunkService.getOne(cid, id);
-        if (chunk.getSize() != request.getContentLengthLong() * 8) {
+        if (chunk.getSize() != request.getContentLengthLong()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST);
         }
 
