@@ -1,1 +1,0 @@
-DROP TABLE IF EXISTS ss3_sessions;
