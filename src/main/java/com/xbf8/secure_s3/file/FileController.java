@@ -10,6 +10,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestAttribute;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
@@ -22,6 +23,7 @@ import com.xbf8.secure_s3.file_chunk.dto.FileChunkResponse;
 import com.xbf8.secure_s3.openbao.OpenbaoService;
 import com.xbf8.secure_s3.openbao.dto.OpenbaoGenerateDataKey;
 import com.xbf8.secure_s3.s3.S3Service;
+import com.xbf8.secure_s3.session.enums.SessionOperation;
 
 import jakarta.servlet.http.HttpServletRequest;
 
@@ -48,11 +50,19 @@ public class FileController {
     }
 
     @PostMapping(path = "/{id}/chunks")
-    public ResponseEntity<List<FileChunkResponse>> createChunks(@PathVariable long id) {
+    public ResponseEntity<List<FileChunkResponse>> createChunks(
+        @PathVariable long id,
+        @RequestAttribute("fid") long requestFileId,
+        @RequestAttribute("operation") SessionOperation operation
+    ) {
+        if (requestFileId != id || operation != SessionOperation.UPLOAD) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED);
+        }
+
         FileEntity file = this.fileService.getOne(id);
         List<FileChunkEntity> chunks = this.fileChunkService.create(file.getId(), file.getSize());
         return ResponseEntity
-            .status(HttpStatus.OK)
+            .status(HttpStatus.CREATED)
             .body(chunks.stream().map(c -> FileChunkResponse.from(c)).toList());
     }
 
@@ -60,8 +70,14 @@ public class FileController {
     public ResponseEntity<?> uploadChunk(
         @PathVariable long id,
         @PathVariable long cid,
+        @RequestAttribute("fid") long requestFileId,
+        @RequestAttribute("operation") SessionOperation operation,
         HttpServletRequest request
     ) {
+        if (requestFileId != id || operation != SessionOperation.UPLOAD) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED);
+        }
+
         FileChunkEntity chunk = this.fileChunkService.getOne(cid, id);
         if (chunk.getSize() != request.getContentLengthLong()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST);
@@ -85,7 +101,7 @@ public class FileController {
 
             this.fileChunkService.saveEDEK(chunk, key.ciphertext());
 
-            return ResponseEntity.status(HttpStatus.OK).body(null);
+            return ResponseEntity.status(HttpStatus.CREATED).body(null);
         } catch (Exception e) {
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR);
         }
@@ -93,8 +109,14 @@ public class FileController {
 
     @GetMapping(path = "/{id}/chunks")
     public ResponseEntity<List<FileChunkResponse>> getChunks(
-        @PathVariable long id
+        @PathVariable long id,
+        @RequestAttribute("fid") long requestFileId,
+        @RequestAttribute("operation") SessionOperation operation
     ) {
+        if (requestFileId != id || operation != SessionOperation.DOWNLOAD) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED);
+        }
+
         List<FileChunkEntity> chunks = this.fileChunkService.getAll(id);
         return ResponseEntity
             .status(HttpStatus.OK)
@@ -104,8 +126,14 @@ public class FileController {
     @GetMapping(path = "/{id}/chunks/{cid}")
     public ResponseEntity<StreamingResponseBody> downloadChunk(
         @PathVariable long id,
-        @PathVariable long cid
+        @PathVariable long cid,
+        @RequestAttribute("fid") long requestFileId,
+        @RequestAttribute("operation") SessionOperation operation
     ) {
+        if (requestFileId != id || operation != SessionOperation.DOWNLOAD) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED);
+        }
+
         FileChunkEntity chunk = this.fileChunkService.getOne(cid, id);
         if (chunk.getEdek() == null) {
             throw new ResponseStatusException(HttpStatus.NO_CONTENT);

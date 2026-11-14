@@ -2,6 +2,7 @@ package com.xbf8.secure_s3.session;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -31,6 +32,28 @@ public class SessionController {
     ) {
         FileEntity file = this.fileService.create(dto);
         SessionResponse body = this.sessionService.create(file.getId(), SessionOperation.UPLOAD);
+        return ResponseEntity
+                .status(HttpStatus.CREATED)
+                .body(body);
+    }
+
+    @PostMapping(path = "/upload/{fid}", version = "v1.0")
+    public ResponseEntity<SessionResponse> createReupload(
+        @PathVariable long fid
+    ) {
+        this.fileService.getOne(fid);
+        SessionResponse body = this.sessionService.create(fid, SessionOperation.UPLOAD);
+        return ResponseEntity
+                .status(HttpStatus.CREATED)
+                .body(body);
+    }
+
+    @PostMapping(path = "/download/{fid}", version = "v1.0")
+    public ResponseEntity<SessionResponse> createDownload(
+        @PathVariable long fid
+    ) {
+        this.fileService.getOne(fid);
+        SessionResponse body = this.sessionService.create(fid, SessionOperation.DOWNLOAD);
         return ResponseEntity
                 .status(HttpStatus.CREATED)
                 .body(body);
