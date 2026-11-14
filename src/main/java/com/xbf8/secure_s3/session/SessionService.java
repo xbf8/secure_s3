@@ -5,24 +5,35 @@ import java.time.Instant;
 import java.util.Optional;
 
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
+import com.xbf8.secure_s3.session.dto.SessionRedisValue;
+import com.xbf8.secure_s3.session.dto.SessionResponse;
 import com.xbf8.secure_s3.session.enums.SessionOperation;
 import com.xbf8.secure_s3.utils.Hasher;
 
 @Service
 public class SessionService {
-    @Value("${secure_s3.session.ttl}")
-    private Integer sessionTTLMinutes;
+    private static final String REDIS_SESSION_PREFIX_KEY = "ss3:sessions";
 
-    private final SessionRepository sessionRepository;
-    public SessionService(final SessionRepository sessionRepository) {
-        this.sessionRepository = sessionRepository;
+    private final Integer sessionTTLMinutes;
+    private final RedisTemplate<String, Object> redisTemplate;
+    public SessionService(
+        @Value("${secure_s3.session.redis.ttl}") Integer sessionTTLMinutes,
+        final RedisTemplate<String, Object> redisTemplate
+    ) {
+        this.sessionTTLMinutes = sessionTTLMinutes;
+        this.redisTemplate = redisTemplate;
     }
 
-    public SessionEntity create(long fileId, SessionOperation operation) {
+    private String formatRedisKey(String key) {
+        return REDIS_SESSION_PREFIX_KEY + ":" + key;
+    }
+
+    public SessionResponse create(long fileId, SessionOperation operation) {
         Optional<String> key = SessionKey.generate(fileId);
         if (key.isEmpty()) {
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR);
@@ -33,21 +44,34 @@ public class SessionService {
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR);
         }
 
-        Instant creationTime = Instant.now();
-        SessionEntity entity = new SessionEntity();
-        entity.setFileId(fileId);
-        entity.setOperation(operation);
-        entity.setKey(hashedKey.get());
-        entity.setActive(true);
-        entity.setExpiresAt(creationTime.plus(Duration.ofMinutes(sessionTTLMinutes)));
-        entity.setCreatedAt(creationTime);
+        SessionRedisValue value = new SessionRedisValue(fileId, operation);
+        this.redisTemplate.opsForValue().set(
+            this.formatRedisKey(hashedKey.get()),
+            value,
+            Duration.ofMinutes(this.sessionTTLMinutes)
+        );
 
-        try {
-            SessionEntity savedEntity = this.sessionRepository.save(entity);
-            savedEntity.setKey(key.get());
-            return savedEntity;
-        } catch(Exception e) {
+        return new SessionResponse(fileId, operation, key.get());
+    }
+
+    public Optional<SessionRedisValue> get(String key) {
+        if (key.length() < 43) {
+            return Optional.empty();
+        }
+
+        Optional<String> hashedKey = Hasher.sha256ToBase64URL(key);
+        if (hashedKey.isEmpty()) {
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR);
         }
+
+        SessionRedisValue value = (SessionRedisValue) this.redisTemplate.opsForValue().get(
+            this.formatRedisKey(hashedKey.get())
+        );
+
+        if (value == null) {
+            return Optional.empty();
+        }
+
+        return Optional.of(value);
     }
 }

@@ -30,9 +30,9 @@ public class SessionController {
         @Valid @RequestBody CreateFileDto dto
     ) {
         FileEntity file = this.fileService.create(dto);
-        SessionEntity entity = this.sessionService.create(file.getId(), SessionOperation.UPLOAD);
+        SessionResponse body = this.sessionService.create(file.getId(), SessionOperation.UPLOAD);
         return ResponseEntity
                 .status(HttpStatus.CREATED)
-                .body(SessionResponse.from(entity));
+                .body(body);
     }
 }
