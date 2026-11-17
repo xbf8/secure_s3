@@ -30,40 +30,20 @@ import jakarta.servlet.http.HttpServletRequest;
 @RestController
 @RequestMapping(path = "/files")
 public class FileController {
-    private final FileService fileService;
     private final FileChunkService fileChunkService;
     private final OpenbaoService openbaoService;
     private final FileChunkEncryptionService fileChunkEncryptionService;
     private final S3Service s3Service;
     public FileController(
-        FileService fileService,
         FileChunkService fileChunkService,
         OpenbaoService openbaoService,
         FileChunkEncryptionService fileChunkEncryptionService,
         S3Service s3Service
     ) {
-        this.fileService = fileService;
         this.fileChunkService = fileChunkService;
         this.openbaoService = openbaoService;
         this.fileChunkEncryptionService = fileChunkEncryptionService;
         this.s3Service = s3Service;
-    }
-
-    @PostMapping(path = "/{id}/chunks")
-    public ResponseEntity<List<FileChunkResponse>> createChunks(
-        @PathVariable long id,
-        @RequestAttribute("fid") long requestFileId,
-        @RequestAttribute("operation") SessionOperation operation
-    ) {
-        if (requestFileId != id || operation != SessionOperation.UPLOAD) {
-            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED);
-        }
-
-        FileEntity file = this.fileService.getOne(id);
-        List<FileChunkEntity> chunks = this.fileChunkService.create(file.getId(), file.getSize());
-        return ResponseEntity
-            .status(HttpStatus.CREATED)
-            .body(chunks.stream().map(c -> FileChunkResponse.from(c)).toList());
     }
 
     @PutMapping(path = "/{id}/chunks/{cid}", consumes = MediaType.APPLICATION_OCTET_STREAM_VALUE)
@@ -113,11 +93,25 @@ public class FileController {
         @RequestAttribute("fid") long requestFileId,
         @RequestAttribute("operation") SessionOperation operation
     ) {
-        if (requestFileId != id || operation != SessionOperation.DOWNLOAD) {
+        if (requestFileId != id) {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED);
         }
 
         List<FileChunkEntity> chunks = this.fileChunkService.getAll(id);
+        boolean allUploaded = true;
+        for (FileChunkEntity c : chunks) {
+            if (c.getEdek() == null) {
+                allUploaded = false;
+                break;
+            }
+        }
+
+        if (operation == SessionOperation.UPLOAD && allUploaded) {
+            throw new ResponseStatusException(HttpStatus.FOUND);
+        } else if (operation == SessionOperation.DOWNLOAD && !allUploaded) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+        }
+
         return ResponseEntity
             .status(HttpStatus.OK)
             .body(chunks.stream().map(c -> FileChunkResponse.from(c)).toList());

@@ -11,6 +11,7 @@ import org.springframework.web.bind.annotation.RestController;
 import com.xbf8.secure_s3.file.FileEntity;
 import com.xbf8.secure_s3.file.FileService;
 import com.xbf8.secure_s3.file.dto.CreateFileDto;
+import com.xbf8.secure_s3.file_chunk.FileChunkService;
 import com.xbf8.secure_s3.session.dto.SessionResponse;
 import com.xbf8.secure_s3.session.enums.SessionOperation;
 
@@ -21,9 +22,15 @@ import jakarta.validation.Valid;
 public class SessionController {
     private final SessionService sessionService;
     private final FileService fileService;
-    public SessionController(SessionService sessionService, FileService fileService) {
+    private final FileChunkService fileChunkService;
+    public SessionController(
+        SessionService sessionService,
+        FileService fileService,
+        FileChunkService fileChunkService
+    ) {
         this.sessionService = sessionService;
         this.fileService = fileService;
+        this.fileChunkService = fileChunkService;
     }
 
     @PostMapping(path = "/upload", version = "v1.0")
@@ -31,6 +38,7 @@ public class SessionController {
         @Valid @RequestBody CreateFileDto dto
     ) {
         FileEntity file = this.fileService.create(dto);
+        this.fileChunkService.create(file.getId(), file.getSize());
         SessionResponse body = this.sessionService.create(file.getId(), SessionOperation.UPLOAD);
         return ResponseEntity
                 .status(HttpStatus.CREATED)
