@@ -28,7 +28,7 @@ import com.xbf8.secure_s3.session.enums.SessionOperation;
 import jakarta.servlet.http.HttpServletRequest;
 
 @RestController
-@RequestMapping(path = "/files")
+@RequestMapping(path = "/files", version = "v1.0")
 public class FileController {
     private final FileChunkService fileChunkService;
     private final OpenbaoService openbaoService;

@@ -1,6 +1,7 @@
 package com.xbf8.secure_s3.session;
 
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -18,7 +19,7 @@ import com.xbf8.secure_s3.session.enums.SessionOperation;
 import jakarta.validation.Valid;
 
 @RestController
-@RequestMapping(path = "/sessions")
+@RequestMapping(path = "/sessions", version = "v1.0")
 public class SessionController {
     private final SessionService sessionService;
     private final FileService fileService;
@@ -33,7 +34,7 @@ public class SessionController {
         this.fileChunkService = fileChunkService;
     }
 
-    @PostMapping(path = "/upload", version = "v1.0")
+    @PostMapping(path = "/upload", consumes = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<SessionResponse> createUpload(
         @Valid @RequestBody CreateFileDto dto
     ) {
@@ -45,7 +46,7 @@ public class SessionController {
                 .body(body);
     }
 
-    @PostMapping(path = "/upload/{fid}", version = "v1.0")
+    @PostMapping(path = "/upload/{fid}", consumes = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<SessionResponse> createReupload(
         @PathVariable long fid
     ) {
@@ -56,7 +57,7 @@ public class SessionController {
                 .body(body);
     }
 
-    @PostMapping(path = "/download/{fid}", version = "v1.0")
+    @PostMapping(path = "/download/{fid}")
     public ResponseEntity<SessionResponse> createDownload(
         @PathVariable long fid
     ) {
