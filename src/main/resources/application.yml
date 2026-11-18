@@ -1,0 +1,53 @@
+server:
+  port: ${SS3_PORT}
+
+spring:
+  application:
+    name: "secure_s3"
+  mvc:
+    apiversion:
+      use:
+        header: "API-Version"
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: "validate"
+  datasource:
+    url: jdbc:${SS3_DB_URL}
+    username: ${SS3_DB_USERNAME}
+    password: ${SS3_DB_PASSWORD}
+    hikari:
+      maximum-pool-size: ${SS3_DB_MAX_POOL_SIZE}
+      minimum-idle: ${SS3_DB_MIN_IDLE}
+  data:
+    radis:
+      host: ${SS3_REDIS_HOST}
+      port: ${SS3_REDIS_PORT}
+      password: ${SS3_REDIS_PASSWORD}
+      timeout: ${SS3_REDIS_TIMEOUTE}
+      lettunce:
+        pool:
+          max-active: ${SS3_REDIS_POOL_MAX_ACTIVE}
+          max-idle: ${SS3_REDIS_POOL_MAX_IDLE}
+          min-idle: ${SS3_REDIS_POOL_MIN_IDLE}
+
+ss3:
+  session:
+    ttl-minutes: ${SS3_SESSION_REDIS_TTL_MINUTES}
+  validate:
+    file:
+      min-size-bytes: ${SS3_MIN_FILE_SIZE_BYTES}
+      max-size-bytes: ${SS3_MAX_FILE_SIZE_BYTES}
+      extensions: ${SS3_FILE_EXTENSIONS}
+      chunk:
+        max-size-bytes: ${SS3_CHUNK_MAX_SIZE_BYTES}
+  openbao:
+    url: ${SS3_OPENBAO_URL}
+    token: ${SS3_OPENBAO_ROOT_TOKEN}
+    key-name: ${SS3_OPENBAO_KEK_NAME}
+  rustfs:
+    url: ${SS3_RUSTFS_URL}
+    access-key: ${SS3_RUSTFS_ACCESS_KEY}
+    secret-key: ${SS3_RUSTFS_SECRET_KEY}
+    bucket-name: ${SS3_RUSTFS_BUCKET_NAME}
+    region: ${SS3_RUSTFS_REGION}

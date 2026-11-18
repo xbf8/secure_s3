@@ -3,12 +3,12 @@ package com.xbf8.secure_s3.session;
 import java.time.Duration;
 import java.util.Optional;
 
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
+import com.xbf8.secure_s3.SS3Properties;
 import com.xbf8.secure_s3.session.dto.SessionRedisValue;
 import com.xbf8.secure_s3.session.dto.SessionResponse;
 import com.xbf8.secure_s3.session.enums.SessionOperation;
@@ -21,10 +21,10 @@ public class SessionService {
     private final Integer sessionTTLMinutes;
     private final RedisTemplate<String, Object> redisTemplate;
     public SessionService(
-        @Value("${secure_s3.session.redis.ttl}") Integer sessionTTLMinutes,
+        SS3Properties ss3Properties,
         final RedisTemplate<String, Object> redisTemplate
     ) {
-        this.sessionTTLMinutes = sessionTTLMinutes;
+        this.sessionTTLMinutes = ss3Properties.session().ttlMinutes();
         this.redisTemplate = redisTemplate;
     }
 

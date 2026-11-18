@@ -2,7 +2,6 @@ package com.xbf8.secure_s3.openbao;
 
 import java.util.Base64;
 
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -11,6 +10,7 @@ import org.springframework.web.client.RestClient;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.core.ParameterizedTypeReference;
 
+import com.xbf8.secure_s3.SS3Properties;
 import com.xbf8.secure_s3.openbao.dto.OpenbaoDataKeyRequest;
 import com.xbf8.secure_s3.openbao.dto.OpenbaoDataKeyResponse;
 import com.xbf8.secure_s3.openbao.dto.OpenbaoDecryptRequest;
@@ -22,15 +22,11 @@ import com.xbf8.secure_s3.openbao.dto.OpenbaoResponse;
 public class OpenbaoService {
     private final String kekName;
     private final RestClient restClient;
-    public OpenbaoService(
-        @Value("${secure_s3.openbao.url}") String url,
-        @Value("${secure_s3.openbao.token}") String token,
-        @Value("${secure_s3.openbao.kek-name}") String kekName
-    ) {
-        this.kekName = kekName;
+    public OpenbaoService(SS3Properties ss3Properties) {
+        this.kekName = ss3Properties.openbao().keyName();
         this.restClient = RestClient.builder()
-            .baseUrl(url + "/v1")
-            .defaultHeader("X-Vault-Token", token)
+            .baseUrl(ss3Properties.openbao().url() + "/v1")
+            .defaultHeader("X-Vault-Token", ss3Properties.openbao().token())
             .defaultHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
             .build();
     }

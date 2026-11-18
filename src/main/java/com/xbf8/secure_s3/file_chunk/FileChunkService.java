@@ -5,29 +5,23 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
-import jakarta.annotation.PostConstruct;
+import com.xbf8.secure_s3.SS3Properties;
 
 @Service
 public class FileChunkService {
-    @Value("${secure_s3.file.chunk.max-size}")
-    private long chunkMaxSize;
-
+    private final long chunkMaxSize;
     private final FileChunkRepository fileChunkRepository;
-    public FileChunkService(FileChunkRepository fileChunkRepository) {
+    public FileChunkService(
+        SS3Properties ss3Properties,
+        FileChunkRepository fileChunkRepository
+    ) {
+        this.chunkMaxSize = ss3Properties.validate().file().chunk().maxSizeBytes();
         this.fileChunkRepository = fileChunkRepository;
-    }
-
-    @PostConstruct
-    public void validateConfig() {
-        if (chunkMaxSize < 1) {
-            throw new IllegalStateException("chunkMaxSize must be >= 1");
-        }
     }
 
     private int calcNumOfChunks(long fileSize) {
