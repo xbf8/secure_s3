@@ -59,6 +59,10 @@ public class FileController {
         }
 
         FileChunkEntity chunk = this.fileChunkService.getOne(cid, id);
+        if (chunk.getEdek() != null) {
+            throw new ResponseStatusException(HttpStatus.FOUND);
+        }
+
         if (chunk.getSize() != request.getContentLengthLong()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST);
         }
